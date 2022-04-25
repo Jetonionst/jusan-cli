@@ -1,0 +1,262 @@
+package com.company;
+import java.io.*;
+import java.util.Scanner;
+import java.util.Calendar;
+import java.text.SimpleDateFormat;
+import java.nio.file.*;
+
+class MyFile{
+    // выводит список всех файлов и директорий для `path` - ls
+    public static void listDirectory(String path) {
+        try {
+            File folder = new File(path);
+            File[] files = folder.listFiles();
+            System.out.println("All files: ");
+            assert files != null;
+            for (File file : files) System.out.println(file.getName());
+        }
+        catch(NullPointerException e) {
+            System.out.println(e);
+        }
+    }
+    // выводит список файлов с расширением `.py` в `path` - ls_py
+    public static void listPythonFiles(String path) {
+        try {
+            File folder = new File(path);
+
+            FilenameFilter pyFilter = (dir, name) -> name.toLowerCase().endsWith(".py");
+
+            File[] files = folder.listFiles(pyFilter);
+            System.out.println(".py files: ");
+            assert files != null;
+            for (File file : files) System.out.println(file.getName());
+        }
+        catch(NullPointerException e) {
+            System.out.println(e);
+        }
+
+    }
+    // выводит `true`, если `path` это директория, в других случаях `false` - id_dir
+    public static void isDirectory(String path) {
+        try {
+            File folder = new File(path);
+            if (!folder.exists()) {
+                throw new Exception("java.nio.file.NoSuchFileException: " + path);
+            }
+            if (folder.isFile()) {
+                System.out.println("isDirectory: false");
+            } else if (folder.isDirectory()) {
+                System.out.println("isDirectory: true");
+            }
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
+    }
+    // выводит `директория` или `файл` в зависимости от типа `path` - define
+    public static void define(String path) {
+        try {
+            File folder = new File(path);
+            if (!folder.exists()) {
+                throw new Exception("java.nio.file.NoSuchFileException: " + path);
+            }
+            if (folder.isDirectory()) {
+                System.out.println("Directory " + folder.getName());
+            } else if (folder.isFile()) {
+                System.out.println("File " + folder.getName());
+            }
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
+    }
+    // выводит права для файла в формате `rwx` для текущего пользователя - readmod
+    public static void printPermissions(String path) {
+        try {
+            File file = new File(path);
+            if (!file.isFile() || !file.exists()) {
+                throw new Exception("java.nio.file.NoSuchFileException: " + path);
+            }
+            checkPermission(file.canRead(), "r");
+            checkPermission(file.canWrite(), "w");
+            checkPermission(file.canExecute(), "x");
+            System.out.println();
+
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+    public static void checkPermission(boolean permission, String type) {
+        if (permission) {
+            System.out.print(type);
+        } else {
+            System.out.print("-");
+        }
+    }
+    // устанавливает права для файла `path` - setmod
+    public static void setPermissions(String path, String permissions) {
+        try {
+            File file = new File(path);
+            if (!file.exists() || !file.isFile()) {
+                throw new Exception("java.nio.file.NoSuchFileException: " + path);
+            }
+            if(permissions == null) {
+                file.setReadable(true);
+                file.setWritable(true);
+                file.setExecutable(true);
+            } else {
+                char ch0 = permissions.charAt(0);
+                char ch1 = permissions.charAt(1);
+                char ch2 = permissions.charAt(2);
+
+                if (ch0!='-' && ch0!='r' && ch1!='-' && ch1!='w' && ch2!='-' && ch2!='x') {
+                    throw new Exception("Wrong roots: " + permissions);
+                }
+
+                file.setReadable(ch0=='r');
+                file.setWritable(ch1=='w');
+                file.setExecutable(ch2=='x');
+            }
+
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+    // выводит контент файла - cat
+    public static void printContent(String path) {
+        try {
+            File file = new File(path);
+            Scanner reader = new Scanner(file);
+            while (reader.hasNextLine()) {
+                String content = reader.nextLine();
+                System.out.println(content);
+            }
+            reader.close();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+    // добавляет строке `# Autogenerated line` в конец `path` - append
+    public static void appendFooter(String path) {
+        try {
+            File file = new File(path);
+            if (!file.isFile() || !file.exists()) {
+                throw new Exception("java.nio.file.NoSuchFileException: " + path);
+            }
+            FileWriter writer = new FileWriter(file, true);
+            writer.append("\n# Autogenerated line");
+            writer.close();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+    // создает копию `path` в директорию `/tmp/${date}.backup` где, date - это дата в формате `dd-mm-yyyy`. `path` может быть директорией или файлом. При директории, копируется весь контент. - bc
+    public static void createBackup(String path) {
+        try {
+            File file = new File(path);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
+            Calendar calendar = Calendar.getInstance();
+            File newBackupFile = new File("/tmp/" + simpleDateFormat.format(calendar.getTime()) + ".backup");
+            if (newBackupFile.exists()) {
+                delete(newBackupFile);
+            }
+            Files.copy(Path.of(file.getPath()), Path.of(newBackupFile.getPath()));
+            File[] listOfFiles = file.listFiles();
+            if (listOfFiles != null) {
+                for (File listOfFile : listOfFiles) {
+                    Files.copy(Path.of(listOfFile.getPath()), Path.of(newBackupFile.getPath() + "/" + listOfFile.getName()));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+    private static void delete(File file) {
+        File[] contents = file.listFiles();
+        if (contents != null) {
+            for (File iter : contents) {
+                if (!Files.isSymbolicLink(iter.toPath())) {
+                    delete(iter);
+                }
+            }
+        }
+        file.delete();
+    }
+    // выводит самое длинное слово в файле - greplong
+    public static void printLongestWord(String path){
+        String longestWord = "";
+        String current;
+        File file = new File(path);
+        Scanner reader = null;
+        try {
+            reader = new Scanner(file);
+
+            while (reader.hasNext()) {
+                current = reader.next();
+                if (current.length() > longestWord.length()) {
+                    longestWord = current;
+                }
+
+            }
+            System.out.println(longestWord);
+        } catch (FileNotFoundException e) {
+            System.out.println(e);
+        }
+    }
+    // выводит список команд и их описание - help
+    public static void help() {
+        System.out.println("MyFile 1.0 команды:");
+        System.out.println("ls <path>               выводит список всех файлов и директорий для path");
+        System.out.println("ls_py <path>            выводит список файлов с расширением .py в path");
+        System.out.println("is_dir <path>           выводит true, если path это директория, в других случаях false");
+        System.out.println("define <path>           выводит директория или файл в зависимости от типа path");
+        System.out.println("readmod <path>          выводит права для файла в формате rwx для текущего пользователя");
+        System.out.println("setmod <path> <perm>    устанавливает права для файла path");
+        System.out.println("cat <path>              выводит контент файла");
+        System.out.println("append <path>           добавляет строку # Autogenerated line в конец path");
+        System.out.println("bc <path>               создает копию path в директорию /tmp/${date}.backup где, date - это дата в формате dd-mm-yyyy");
+        System.out.println("greplong <path>         выводит самое длинное слово в файле");
+        System.out.println("exit                    завершает работу программы");
+    }
+    public static void exit() {
+        System.out.println("Goodbye!");
+    }
+}
+
+
+public class Main {
+
+    public static void main(String[] args) {
+        // write your code here
+        while (true) {
+            Scanner in = new Scanner(System.in);
+            String str = in.nextLine();
+            String[] arrOfStr = str.split(" ");
+            String command = arrOfStr[0];
+            String path = null;
+            String permissions = null;
+            if (arrOfStr.length == 2) {
+                path = arrOfStr[1];
+            }
+            if (arrOfStr.length == 3) {
+                permissions = arrOfStr[2];
+            }
+
+            if (command.equals("ls")) MyFile.listDirectory(path);
+            if (command.equals("ls_py")) MyFile.listPythonFiles(path);
+            if (command.equals("id_dir")) MyFile.isDirectory(path);
+            if (command.equals("define")) MyFile.define(path);
+            if (command.equals("readmod")) MyFile.printPermissions(path);
+            if (command.equals("setmod")) MyFile.setPermissions(path, permissions);
+            if (command.equals("cat")) MyFile.printContent(path);
+            if (command.equals("append")) MyFile.appendFooter(path);
+            if (command.equals("bc")) MyFile.createBackup(path);
+            if (command.equals("greplong")) MyFile.printLongestWord(path);
+            if (command.equals("help")) MyFile.help();
+            if (command.equals("exit")) {
+                MyFile.exit();
+                break;
+            }
+        }
+    }
+}
